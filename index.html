@@ -1,64 +1,225 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8"/>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Sadat • Social Media Mini-App</title>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Sadat • Social Mini App</title>
 
-  <link rel="stylesheet" href="style.css" />
+  <!-- Google Fonts -->
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
 
-  <!-- Fixed analytics bug (removed constant loops) -->
+  <!-- Chart.js CDN (for mini analytics) -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <!-- Main CSS -->
+  <link rel="stylesheet" href="css/style.css" />
+
+  <!-- A small inline script to set theme based on system preference early -->
+  <script>
+    (function(){
+      try {
+        const saved = localStorage.getItem('ss_theme');
+        if(!saved){
+          const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+          if(prefersDark) document.documentElement.classList.add('dark');
+        } else {
+          if(saved === 'dark') document.documentElement.classList.add('dark');
+        }
+      } catch(e){}
+    })();
+  </script>
 </head>
-
 <body>
-<div id="app">
+  <div id="app" class="app">
+    <!-- LANDING MODAL (shown on first visit) -->
+    <div class="modal hidden" id="landingModal" role="dialog" aria-hidden="true">
+      <div class="modal-card">
+        <header class="modal-head"><h2>Welcome to Sadat</h2><button class="icon-btn" data-action="close-modal">&times;</button></header>
+        <div class="modal-body">
+          <p>Sadat is a front-end demo social app — perfect for your portfolio.</p>
+          <p>Features: posts, likes, comments, search, drag & drop uploads, theme, analytics, and more.</p>
+        </div>
+        <div class="modal-foot">
+          <label><input type="checkbox" id="dontShowLanding"> Don't show again</label>
+          <div style="margin-left:auto"><button class="btn primary" data-action="close-modal">Get started</button></div>
+        </div>
+      </div>
+    </div>
 
-  <!-- ================= LOGIN SCREEN ================= -->
-  <div id="loginPage" class="login-container hidden">
-    <h1 class="app-title">Sadat</h1>
-    <input id="loginUsername" type="text" placeholder="Enter Username" />
-    <button id="loginBtn">Login</button>
-  </div>
+    <!-- LOGIN SCREEN -->
+    <div id="loginWrapper" class="login-wrapper">
+      <div class="login-card">
+        <h1>Sadat</h1>
+        <p class="muted">Login (mocked) — stored locally for demo</p>
+        <input id="loginName" placeholder="Enter display name" />
+        <div style="display:flex;gap:8px;margin-top:10px">
+          <button id="loginSubmit" class="btn primary">Login</button>
+          <button id="loginGuest" class="btn">Guest</button>
+        </div>
+        <small class="muted" style="display:block;margin-top:12px">Your data stays in your browser (LocalStorage).</small>
+      </div>
+    </div>
 
-  <!-- ================= MAIN APP ================= -->
-  <div id="mainPage" class="hidden">
+    <!-- MAIN APP -->
+    <div id="mainApp" class="hidden">
 
-    <!-- NAVBAR -->
-    <nav class="navbar">
-      <h2 class="logo">Sadat</h2>
+      <!-- Top bar -->
+      <header class="topbar">
+        <div class="brand" data-action="go-home">Sadat</div>
+        <div class="top-actions">
+          <input id="globalSearch" class="search-input" placeholder="Search posts..." />
+          <button class="icon-btn" id="notifBtn" title="Notifications" data-action="open-notifs">
+            <svg viewBox="0 0 24 24" width="18" height="18"><path d="M12 22a2.5 2.5 0 0 0 2.5-2.5h-5A2.5 2.5 0 0 0 12 22zM18 16v-5a6 6 0 0 0-12 0v5l-2 2h16l-2-2z" fill="currentColor"/></svg>
+            <span id="notifBadge" class="badge hidden">0</span>
+          </button>
+          <button class="icon-btn" id="themeToggle" title="Toggle theme">
+            <svg id="themeIcon" viewBox="0 0 24 24" width="18" height="18"><path d="M21 12.8A9 9 0 1 1 11.2 3 7 7 0 0 0 21 12.8z" fill="currentColor"/></svg>
+          </button>
 
-      <input type="text" id="searchInput" placeholder="Search posts..." />
+          <button class="cta" id="openCreate" data-action="open-create">Create</button>
+        </div>
+      </header>
 
-      <div class="theme-toggle" id="themeBtn">🌙</div>
-    </nav>
+      <!-- Layout -->
+      <main class="layout">
+        <!-- Left -->
+        <aside class="left-col">
+          <div class="profile-card" id="miniProfile">
+            <img src="assets/avatar-default.png" alt="avatar" class="avatar" id="miniAvatar">
+            <div class="profile-info">
+              <div id="miniName">You</div>
+              <div class="muted" id="miniBio">Front-end developer • Portfolio</div>
+            </div>
+            <button class="link" data-action="go-profile">View profile</button>
+          </div>
 
-    <!-- PROFILE SECTION -->
-    <section class="profile">
-      <img src="https://avatars.githubusercontent.com/u/1?v=4" class="avatar">
-      <h3 id="displayUser">User</h3>
-      <p class="bio">Welcome to Sadat — a lightweight social feed.</p>
-    </section>
+          <nav class="nav-cards">
+            <button class="nav-item" data-action="go-home">Feed</button>
+            <button class="nav-item" data-action="go-explore">Explore</button>
+            <button class="nav-item" data-action="go-saved">Saved</button>
+            <button class="nav-item" data-action="go-settings">Settings</button>
+          </nav>
 
-    <!-- POST CREATION -->
-    <section class="create-post">
+          <div class="small-card">
+            <h4>Mini Analytics</h4>
+            <canvas id="miniChart" width="250" height="150"></canvas>
+          </div>
+        </aside>
 
-      <textarea id="postText" placeholder="Write something..."></textarea>
+        <!-- Center -->
+        <section class="center-col" id="view">
+          <!-- views injected by JS -->
+        </section>
 
-      <!-- Drag & Drop Upload -->
-      <div id="dropZone" class="drop-zone">
-        <p>Drag & Drop Image Here</p>
-        <input type="file" id="imageUpload" accept="image/*" />
+        <!-- Right -->
+        <aside class="right-col">
+          <div class="small-card">
+            <h4>Suggested</h4>
+            <div id="suggestions"></div>
+          </div>
+
+          <div class="small-card">
+            <h4>About</h4>
+            <p class="muted">Sadat — front-end demo. Data saved locally in your browser.</p>
+          </div>
+        </aside>
+      </main>
+
+      <!-- Bottom nav mobile -->
+      <nav class="bottom-nav">
+        <button data-action="go-home" class="bn-item">Home</button>
+        <button data-action="go-explore" class="bn-item">Explore</button>
+        <button id="mobileCreate" class="bn-item">Create</button>
+        <button data-action="go-saved" class="bn-item">Saved</button>
+        <button data-action="go-profile" class="bn-item">Me</button>
+      </nav>
+
+      <!-- Create modal -->
+      <div class="modal hidden" id="createModal" role="dialog">
+        <div class="modal-card">
+          <header class="modal-head">
+            <h3>Create Post</h3>
+            <button class="icon-btn" data-action="close-modal">&times;</button>
+          </header>
+          <div class="modal-body">
+            <div class="form-group">
+              <label>Caption</label>
+              <textarea id="postText" placeholder="Share something..."></textarea>
+              <div class="muted small" id="charCount">0 / 300</div>
+            </div>
+
+            <div class="form-group">
+              <label>Image (optional)</label>
+              <div id="dropZone" class="drop-zone">
+                <p>Drag & drop or click to choose an image</p>
+                <input type="file" id="postImage" accept="image/*"/>
+              </div>
+              <div class="img-preview hidden" id="imgPreviewWrap"><img id="imgPreview" alt="preview"></div>
+            </div>
+
+            <div class="form-actions">
+              <button id="publishBtn" class="btn primary">Publish</button>
+              <button class="btn" data-action="close-modal">Cancel</button>
+            </div>
+          </div>
+        </div>
       </div>
 
-      <button id="postBtn">Post</button>
-    </section>
+      <!-- Comment modal -->
+      <div class="modal hidden" id="commentModal">
+        <div class="modal-card small">
+          <header class="modal-head">
+            <h3>Comments</h3>
+            <button class="icon-btn" data-action="close-modal">&times;</button>
+          </header>
+          <div class="modal-body" id="commentBody"></div>
+          <div class="modal-foot">
+            <input id="commentInput" placeholder="Write a comment..." />
+            <button id="sendComment" class="btn">Send</button>
+          </div>
+        </div>
+      </div>
 
-    <!-- FEED -->
-    <section id="feed" class="feed"></section>
+      <!-- Notification dropdown -->
+      <div class="notif-dropdown hidden" id="notifDropdown"></div>
 
+      <!-- Floating Action Button -->
+      <button id="fab" class="fab" title="Create post">＋</button>
+
+      <!-- Templates -->
+      <template id="postCardTpl">
+        <article class="post-card">
+          <header class="post-head">
+            <img class="avatar post-avatar" src="assets/avatar-default.png" alt="avatar"/>
+            <div class="post-meta">
+              <div class="username">User</div>
+              <div class="muted small timestamp">just now</div>
+            </div>
+            <button class="icon-btn save-btn" title="Save">★</button>
+          </header>
+
+          <div class="post-content">
+            <p class="post-text"></p>
+            <img class="post-image hidden" alt="post image"/>
+          </div>
+
+          <footer class="post-foot">
+            <div class="actions">
+              <button class="icon-btn like-btn" title="Like">♡ <span class="like-count">0</span></button>
+              <button class="icon-btn comment-btn" title="Comments">💬 <span class="comment-count">0</span></button>
+              <button class="icon-btn share-btn" title="Share">⤴</button>
+            </div>
+          </footer>
+        </article>
+      </template>
+
+      <footer class="app-footer">
+        <small>Built with ♥ • Front-end demo for portfolio</small>
+      </footer>
+    </div>
   </div>
-</div>
 
-<script src="app.js"></script>
+  <!-- Main JS -->
+  <script src="js/app.js" defer></script>
 </body>
 </html>
